@@ -2,23 +2,45 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Weird Realistic Chess — Online</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Weird Realistic Chess — Online (Mobile Optimized)</title>
 <style>
-  :root{ --light:#f0d9b5; --dark:#b58863; --accent:#00e0b8; --warn:#ff4d4f; --bg:#121212; --panel:#1e1e1e; --text:#f5f5f5; }
-  *{box-sizing:border-box}
-  body{ margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-        display:grid; grid-template-columns: 320px minmax(360px,720px) 320px; gap:16px; padding:16px; }
-  header{grid-column:1/-1; display:flex; justify-content:space-between; align-items:center}
-  h1{font-size:22px; margin:0}
-  .btn{background:#2b2b2b; color:var(--text); border:1px solid #444; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600}
-  .btn:hover{transform:translateY(-1px); background:#323232}
-  .wrap-board{display:flex; justify-content:center}
-  .board{ display:grid; grid-template-columns:repeat(8, min(10vw,72px)); grid-template-rows:repeat(8, min(10vw,72px));
-          border:6px solid #080808; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.4); background:#111; }
-  .sq{position:relative; user-select:none; display:flex; align-items:center; justify-content:center; font-size:min(6.2vw,45px); line-height:1;}
+  :root{
+    --bg:#121212; --panel:#1e1e1e; --text:#f5f5f5;
+    --light:#f0d9b5; --dark:#b58863; --accent:#00e0b8; --warn:#ff4d4f;
+    /* square size variable — recalculated via container width */
+    --sq: 56px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    display:grid; gap:12px;
+    grid-template-columns: minmax(260px,1fr) minmax(340px,720px) minmax(260px,1fr);
+    grid-template-rows: auto 1fr auto;
+    padding:12px;
+  }
+  header{grid-column:1/-1; display:flex; justify-content:space-between; align-items:center; gap:10px}
+  h1{font-size:clamp(16px,3.4vw,22px); margin:0}
+  .btn{background:#2b2b2b; color:var(--text); border:1px solid #444; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:650; touch-action:manipulation}
+  .btn:active{transform:scale(.98)}
+  .wrap-board{display:flex; justify-content:center; align-items:flex-start}
+  /* Board container uses vmin to fit on phones */
+  .board-wrap{
+    width:min(96vmin, 96vw); max-width:720px; aspect-ratio:1/1;
+    /* derive square size from container width */
+    --sq: calc(100% / 8);
+  }
+  .board{
+    display:grid; grid-template-columns:repeat(8, var(--sq)); grid-template-rows:repeat(8, var(--sq));
+    border:6px solid #080808; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.4); background:#111;
+    width:100%; height:100%;
+  }
+  .sq{position:relative; user-select:none; display:flex; align-items:center; justify-content:center;
+      font-size:calc(var(--sq) * .72); line-height:1;}
   .light{background:var(--light)} .dark{background:var(--dark)}
-  .sq.coord::after{content:attr(data-coord); position:absolute; left:6px; bottom:4px; font-size:11px; opacity:.6;}
+  .sq.coord::after{content:attr(data-coord); position:absolute; left:6px; bottom:4px; font-size:clamp(9px, 1.8vw, 12px); opacity:.6;}
   .piece{filter:drop-shadow(0 2px 1px rgba(0,0,0,.35)); cursor:pointer; transition:transform .05s}
   .sel{outline:3px solid var(--accent); outline-offset:-3px}
   .dest{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;}
@@ -26,18 +48,33 @@
   .capture{outline:3px solid rgba(180,0,0,.6); outline-offset:-3px}
   .incheck{box-shadow:inset 0 0 0 4px var(--warn)}
   .panel{background:var(--panel); border:1px solid #2a2a2a; border-radius:12px; padding:12px;}
-  .score{font-weight:700; font-size:14px; display:flex; gap:10px; align-items:center}
-  .score span{padding:4px 8px; border-radius:6px; background:#262626; border:1px solid #3a3a3a}
+  .score{font-weight:700; font-size:14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .score span{padding:6px 10px; border-radius:8px; background:#262626; border:1px solid #3a3a3a}
   .status{margin-top:8px; font-size:14px; min-height:24px}
   .moves{max-height:60vh; overflow:auto; direction:ltr; background:#0f0f0f; border-radius:8px; padding:8px; border:1px solid #222}
   .moves table{width:100%; border-collapse:collapse}
-  .moves td{padding:4px 6px; border-bottom:1px dashed #222; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:13px}
-  .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-  input,select{background:#1b1b1b; color:var(--text); border:1px solid #333; border-radius:8px; padding:8px 10px}
-  .tag{display:inline-block; padding:2px 6px; border:1px solid #333; border-radius:999px; font-size:12px; background:#1c1c1c}
-  .promo{position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center;}
-  .promo .box{background:#101010; padding:12px; border-radius:12px; border:1px solid #2a2a2a}
-  .promo .opt{cursor:pointer; font-size:42px; padding:8px 10px; border-radius:10px; border:1px solid #333; background:#1b1b1b}
+  .moves td{padding:6px 6px; border-bottom:1px dashed #222; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:13px}
+
+  /* Responsive layout: stack panels on narrow screens */
+  @media (max-width: 980px){
+    body{ grid-template-columns: 1fr; }
+    aside.panel:first-of-type{ order:2 }
+    main.wrap-board{ order:1 }
+    aside.panel:last-of-type{ order:3 }
+    .board-wrap{ width:min(94vmin, 100%); }
+    header{flex-wrap:wrap}
+  }
+
+  /* Touch-friendly inputs */
+  input,select{background:#1b1b1b; color:var(--text); border:1px solid #333; border-radius:10px; padding:10px 12px; min-height:42px; font-size:16px}
+  label{font-size:14px}
+  .tag{display:inline-block; padding:4px 8px; border:1px solid #333; border-radius:999px; font-size:12px; background:#1c1c1c}
+
+  /* Promotion modal */
+  .promo{position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; padding:16px}
+  .promo .box{background:#101010; padding:14px; border-radius:14px; border:1px solid #2a2a2a; width:min(420px, 96vw)}
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .promo .opt{cursor:pointer; font-size:48px; padding:10px 12px; border-radius:12px; border:1px solid #333; background:#1b1b1b}
 </style>
 </head>
 <body>
@@ -60,11 +97,11 @@
     <div><b>און־ליין מול חבר</b></div>
     <div class="row" style="margin-top:6px">
       <label>שרת:</label>
-      <input id="wsUrl" placeholder="(auto)" style="width:170px">
+      <input id="wsUrl" placeholder="(auto)" style="width:200px">
     </div>
     <div class="row" style="margin-top:6px">
       <label>חדר:</label>
-      <input id="room" placeholder="למשל: HAREL123" style="width:140px">
+      <input id="room" placeholder="למשל: HAREL123" style="width:160px">
     </div>
     <div class="row" style="margin-top:6px">
       <label>צבע:</label>
@@ -88,7 +125,9 @@
   </aside>
 
   <main class="wrap-board">
-    <div class="board" id="board"></div>
+    <div class="board-wrap">
+      <div class="board" id="board"></div>
+    </div>
   </main>
 
   <aside class="panel">
@@ -104,13 +143,13 @@
   </div>
 
 <script>
-// Auto-fill ws URL to current host (works on Render with HTTPS/WSS)
+// Auto-fill WS URL to current host (HTTPS -> WSS)
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('wsUrl').value =
     (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
 });
 
-/* ===== Full chess engine + UI (legal moves, castling, en passant, promotion) ===== */
+/* ===== Chess engine & UI (same logic, responsive UI) ===== */
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const SKIN = {'P':'🦆','N':'🦄','B':'🦅','R':'🦏','Q':'🦖','K':'🧙‍♂️','p':'🦆','n':'🦄','b':'🦅','r':'🦏','q':'🦖','k':'🧙‍♂️'};
 const PIECE_VALUE = { 'p':1, 'n':3, 'b':3, 'r':5, 'q':9 };
