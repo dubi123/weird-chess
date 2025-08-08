@@ -3,12 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Weird Realistic Chess — Online (Mobile Optimized)</title>
+<title>Weird Realistic Chess — Online (Bigger Icons)</title>
 <style>
   :root{
     --bg:#121212; --panel:#1e1e1e; --text:#f5f5f5;
     --light:#f0d9b5; --dark:#b58863; --accent:#00e0b8; --warn:#ff4d4f;
-    /* square size variable — recalculated via container width */
     --sq: 56px;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
@@ -26,10 +25,8 @@
   .btn{background:#2b2b2b; color:var(--text); border:1px solid #444; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:650; touch-action:manipulation}
   .btn:active{transform:scale(.98)}
   .wrap-board{display:flex; justify-content:center; align-items:flex-start}
-  /* Board container uses vmin to fit on phones */
   .board-wrap{
     width:min(96vmin, 96vw); max-width:720px; aspect-ratio:1/1;
-    /* derive square size from container width */
     --sq: calc(100% / 8);
   }
   .board{
@@ -37,11 +34,20 @@
     border:6px solid #080808; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.4); background:#111;
     width:100%; height:100%;
   }
-  .sq{position:relative; user-select:none; display:flex; align-items:center; justify-content:center;
-      font-size:calc(var(--sq) * .72); line-height:1;}
+  .sq{position:relative; user-select:none; display:flex; align-items:center; justify-content:center; line-height:1;}
   .light{background:var(--light)} .dark{background:var(--dark)}
   .sq.coord::after{content:attr(data-coord); position:absolute; left:6px; bottom:4px; font-size:clamp(9px, 1.8vw, 12px); opacity:.6;}
-  .piece{filter:drop-shadow(0 2px 1px rgba(0,0,0,.35)); cursor:pointer; transition:transform .05s}
+  /* BIGGER ICONS: drive size from square and center perfectly */
+  .piece{
+    font-size: calc(var(--sq) * 0.98);  /* was ~0.72, now ~0.98 for much bigger icons */
+    filter:drop-shadow(0 2px 1px rgba(0,0,0,.35));
+    cursor:pointer; transition:transform .05s;
+    line-height: 1;
+  }
+  /* Slightly oversize on small screens for extra clarity */
+  @media (max-width: 600px){
+    .piece{ font-size: calc(var(--sq) * 1.06); }
+  }
   .sel{outline:3px solid var(--accent); outline-offset:-3px}
   .dest{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;}
   .dot{width:34%; height:34%; border-radius:50%; background:rgba(0,0,0,.22); outline:2px solid rgba(0,0,0,.15);}
@@ -55,7 +61,6 @@
   .moves table{width:100%; border-collapse:collapse}
   .moves td{padding:6px 6px; border-bottom:1px dashed #222; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:13px}
 
-  /* Responsive layout: stack panels on narrow screens */
   @media (max-width: 980px){
     body{ grid-template-columns: 1fr; }
     aside.panel:first-of-type{ order:2 }
@@ -65,12 +70,10 @@
     header{flex-wrap:wrap}
   }
 
-  /* Touch-friendly inputs */
   input,select{background:#1b1b1b; color:var(--text); border:1px solid #333; border-radius:10px; padding:10px 12px; min-height:42px; font-size:16px}
   label{font-size:14px}
   .tag{display:inline-block; padding:4px 8px; border:1px solid #333; border-radius:999px; font-size:12px; background:#1c1c1c}
 
-  /* Promotion modal */
   .promo{position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; padding:16px}
   .promo .box{background:#101010; padding:14px; border-radius:14px; border:1px solid #2a2a2a; width:min(420px, 96vw)}
   .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
@@ -143,13 +146,12 @@
   </div>
 
 <script>
-// Auto-fill WS URL to current host (HTTPS -> WSS)
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('wsUrl').value =
     (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
 });
 
-/* ===== Chess engine & UI (same logic, responsive UI) ===== */
+// ----- engine & UI (same as previous mobile version) -----
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const SKIN = {'P':'🦆','N':'🦄','B':'🦅','R':'🦏','Q':'🦖','K':'🧙‍♂️','p':'🦆','n':'🦄','b':'🦅','r':'🦏','q':'🦖','k':'🧙‍♂️'};
 const PIECE_VALUE = { 'p':1, 'n':3, 'b':3, 'r':5, 'q':9 };
@@ -380,7 +382,6 @@ function loadSnapshot(s){ state.squares=s.squares; state.turn=s.turn; state.cast
 function serializeMove(m){ return {from:m.from,to:m.to,promo:m.promo||null,castle:m.castle||null,enpassant:!!m.enpassant,capture:!!m.capture,double:!!m.double,piece:m.piece}; }
 function deserializeMove(m){ return {from:m.from,to:m.to,promo:m.promo,castle:m.castle,enpassant:m.enpassant,capture:m.capture,double:m.double,piece:m.piece}; }
 
-// WebSocket client
 function connectWS(){
   if(net.connected) return;
   const url = document.getElementById('wsUrl').value || ((location.protocol==='https:'?'wss://':'ws://')+location.host);
