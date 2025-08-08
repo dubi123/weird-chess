@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Weird Realistic Chess — Online (XL Icons v4)</title>
+<title>Weird Realistic Chess — Online (Arctic vs Night)</title>
 <style>
   :root{ --bg:#121212; --panel:#1e1e1e; --text:#f5f5f5; --light:#f0d9b5; --dark:#b58863; --accent:#00e0b8; --warn:#ff4d4f; }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
@@ -16,20 +16,40 @@
   .btn:active{transform:scale(.98)}
   .wrap-board{display:flex; justify-content:center; align-items:flex-start}
   .board-wrap{ width:min(96vmin, 96vw); max-width:720px; aspect-ratio:1/1; }
-  /* Force square size independent of your old CSS */
   .board{ display:grid; grid-template-columns:repeat(8, min(12.5vmin, 90px)); grid-template-rows:repeat(8, min(12.5vmin, 90px));
           border:6px solid #080808; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.4); background:#111; width:100%; height:100%; }
   .sq{ position:relative; user-select:none; display:flex; align-items:center; justify-content:center; line-height:1; overflow:hidden; touch-action:manipulation; }
   .light{background:var(--light)} .dark{background:var(--dark)}
   .sq.coord::after{content:attr(data-coord); position:absolute; left:6px; bottom:4px; font-size:clamp(9px, 1.8vw, 12px); opacity:.6; pointer-events:none;}
-  /* >>> XL ICONS independent of variables <<< */
-  .piece{ font-size: clamp(52px, 13.5vmin, 112px) !important; line-height:1; filter:drop-shadow(0 2px 1px rgba(0,0,0,.35)); cursor:pointer; transition:transform .05s; pointer-events:none; }
+
+  /* ===== Arctic vs Night tokens ===== */
+  .token{
+    position: relative; width: 92%; height: 92%;
+    border-radius: 50%; display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 3px 8px rgba(0,0,0,.35), inset 0 0 0 3px var(--ring);
+    z-index:2;
+  }
+  .token.arctic{ --ring:#13d8c4; background: radial-gradient(#fff 0%, #eaf6ff 70%, #d6ecff 100%); }
+  .token.night { --ring:#ff2ea6; background: radial-gradient(#171717 0%, #0f0f0f 70%, #0a0a0a 100%); }
+
+  /* Big, crisp glyphs */
+  .piece{
+    font-size: clamp(52px, 13.5vmin, 112px) !important;
+    line-height:1; filter:drop-shadow(0 2px 1px rgba(0,0,0,.35)); pointer-events:none;
+  }
   @media (max-width: 600px){ .piece{ font-size: clamp(60px, 15vmin, 128px) !important; } }
+
   .sel{outline:3px solid var(--accent); outline-offset:-3px}
+  .sq.sel .token{ box-shadow:
+     0 0 0 3px var(--ring),
+     0 3px 8px rgba(0,0,0,.35),
+     0 0 24px color-mix(in srgb, var(--ring) 45%, transparent); }
+
   .dest{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:1;}
   .dot{width:30%; height:30%; border-radius:50%; background:rgba(0,0,0,.22); outline:2px solid rgba(0,0,0,.15);}
   .capture{outline:3px solid rgba(180,0,0,.6); outline-offset:-3px}
   .incheck{box-shadow:inset 0 0 0 4px var(--warn)}
+
   .panel{background:var(--panel); border:1px solid #2a2a2a; border-radius:12px; padding:12px;}
   .score{font-weight:700; font-size:14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap}
   .score span{padding:6px 10px; border-radius:8px; background:#262626; border:1px solid #3a3a3a}
@@ -37,10 +57,20 @@
   .moves{max-height:60vh; overflow:auto; direction:ltr; background:#0f0f0f; border-radius:8px; padding:8px; border:1px solid #222}
   .moves table{width:100%; border-collapse:collapse}
   .moves td{padding:6px 6px; border-bottom:1px dashed #222; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:13px}
-  @media (max-width: 980px){ body{ grid-template-columns: 1fr; } aside.panel:first-of-type{ order:2 } main.wrap-board{ order:1 } aside.panel:last-of-type{ order:3 } .board-wrap{ width:min(94vmin, 100%); } header{flex-wrap:wrap} }
+
+  @media (max-width: 980px){
+    body{ grid-template-columns: 1fr; }
+    aside.panel:first-of-type{ order:2 }
+    main.wrap-board{ order:1 }
+    aside.panel:last-of-type{ order:3 }
+    .board-wrap{ width:min(94vmin, 100%); }
+    header{flex-wrap:wrap}
+  }
+
   input,select{background:#1b1b1b; color:var(--text); border:1px solid #333; border-radius:10px; padding:10px 12px; min-height:42px; font-size:16px}
   label{font-size:14px}
   .tag{display:inline-block; padding:4px 8px; border:1px solid #333; border-radius:999px; font-size:12px; background:#1c1c1c}
+
   .promo{position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; padding:16px}
   .promo .box{background:#101010; padding:14px; border-radius:14px; border:1px solid #2a2a2a; width:min(420px, 96vw)}
   .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
@@ -66,7 +96,7 @@
     </div>
     <div class="status" id="status">מתחבר לשרת...</div>
     <hr>
-    <div><b>און־ליין מול חבר</b> <span class="tag">טיפ: כדי לבדוק מהלכים בלי מגבלות — אל תלחץ "התחבר"</span></div>
+    <div><b>און־ליין מול חבר</b></div>
     <div class="row" style="margin-top:6px">
       <label>שרת:</label>
       <input id="wsUrl" placeholder="(auto)" style="width:200px">
@@ -92,7 +122,7 @@
       <div id="netInfo" style="opacity:.85; font-size:12px; margin-top:4px"></div>
     </div>
     <hr>
-    <div><b>דמויות:</b> ♟️→🦆 | ♜→🦏 | ♞→🦄 | ♝→🦅 | ♛→🦖 | ♚→🧙‍♂️</div>
+    <div><b>Arctic (לבן):</b> 🦭 🦌 🦅 🐻‍❄️ 🐋 ❄️👑 &nbsp;|&nbsp; <b>Night (שחור):</b> 🦝 🦇 🦉 🐺 🐆 🌑👑</div>
     <div class="tag" style="margin-top:6px">נקודות: חייל 1 | רץ/סוס 3 | צריח 5 | מלכה 9</div>
   </aside>
 
@@ -115,15 +145,17 @@
   </div>
 
 <script>
-// Auto WS URL
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('wsUrl').value =
     (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
 });
 
-/* ===== FULL CHESS ENGINE (as before) ===== */
+/* ===== Engine + Arctic/Night Skin ===== */
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-const SKIN = {'P':'🦆','N':'🦄','B':'🦅','R':'🦏','Q':'🦖','K':'🧙‍♂️','p':'🦆','n':'🦄','b':'🦅','r':'🦏','q':'🦖','k':'🧙‍♂️'};
+const SKIN = {
+  'P':'🦭','N':'🦌','B':'🦅','R':'🐻‍❄️','Q':'🐋','K':'❄️👑',
+  'p':'🦝','n':'🦇','b':'🦉','r':'🐺','q':'🐆','k':'🌑👑'
+};
 const PIECE_VALUE = { 'p':1, 'n':3, 'b':3, 'r':5, 'q':9 };
 const boardEl = document.getElementById('board'), statusEl = document.getElementById('status'), turnTag = document.getElementById('turnTag');
 const scoreWEl = document.getElementById('scoreW'), scoreBEl = document.getElementById('scoreB'), moveTable = document.getElementById('movelist');
@@ -269,7 +301,7 @@ document.getElementById('btn-flip').onclick=()=>{ flip=!flip; draw(); };
 document.getElementById('btn-connect').onclick=connectWS;
 document.getElementById('btn-disconnect').onclick=disconnectWS;
 
-/* Zoom controls for icon size (saved to localStorage) */
+/* Zoom controls for icons (transform scale, stored in localStorage) */
 const ZOOM_KEY='wc_zoom';
 function applyZoom(){
   const z=parseFloat(localStorage.getItem(ZOOM_KEY)||'1');
@@ -285,8 +317,12 @@ function draw(){
   for(let r=0;r<8;r++) for(let c=0;c<8;c++){
     let rr=flip?7-r:r, cc=flip?7-c:c, idx=rcToIndex(rr,cc), p=state.squares[idx];
     const sq=document.createElement('div'); sq.className='sq '+(((r+c)%2===0)?'light':'dark')+' coord'; sq.dataset.index=idx; sq.dataset.coord=coordLabel(rr,cc);
-    sq.onclick=()=>selectSquare(idx); // click on the cell (emoji has pointer-events:none)
-    if(p){ const el=document.createElement('div'); el.className='piece '+(isWhite(p)?'white':'black'); el.textContent=SKIN[p]; sq.appendChild(el); }
+    sq.onclick=()=>selectSquare(idx);
+    if(p){
+      const wrap=document.createElement('div'); wrap.className='token '+(isWhite(p)?'arctic':'night');
+      const el=document.createElement('div'); el.className='piece '+(isWhite(p)?'white':'black'); el.textContent=SKIN[p];
+      wrap.appendChild(el); sq.appendChild(wrap);
+    }
     boardEl.appendChild(sq);
   }
   paintCheckSquares(); score(); renderMoveList(); turnTag.textContent='תור: '+(state.turn==='w'?'לבן':'שחור'); applyZoom();
@@ -313,10 +349,9 @@ function highlight(from, moves){
 }
 
 function selectSquare(idx){
-  // If connected online: only your color & your turn can move.
   if(net.connected){
     const myTurn = (net.color==='white' && state.turn==='w') || (net.color==='black' && state.turn==='b');
-    if(!myTurn){ statusEl.textContent='זה לא התור שלך (או שאתה צופה). נסה אופליין או בחר צבע מתאים.'; return; }
+    if(!myTurn){ statusEl.textContent='זה לא התור שלך (או שאתה צופה).'; return; }
   }
   const p = state.squares[idx];
   if(selected===idx){ clearHighlights(); selected=null; return; }
@@ -350,7 +385,7 @@ function loadSnapshot(s){ state.squares=s.squares; state.turn=s.turn; state.cast
 function serializeMove(m){ return {from:m.from,to:m.to,promo:m.promo||null,castle:m.castle||null,enpassant:!!m.enpassant,capture:!!m.capture,double:!!m.double,piece:m.piece}; }
 function deserializeMove(m){ return {from:m.from,to:m.to,promo:m.promo,castle:m.castle,enpassant:m.enpassant,capture:m.capture,double:m.double,piece:m.piece}; }
 
-// WS client
+// WebSocket client
 function connectWS(){
   if(net.connected) return;
   const url = document.getElementById('wsUrl').value || ((location.protocol==='https:'?'wss://':'ws://')+location.host);
