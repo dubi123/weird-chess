@@ -1,15 +1,14 @@
-# Weird Chess Online (Render-ready)
+# Weird Realistic Chess — Full UI (Render Ready)
 
-## Run locally
+## Deploy on Render
+- New → Web Service
+- Build: `npm install`
+- Start: `node server.js`
+- Open the URL; the client auto-connects to `wss://<host>`.
+
+## Local Dev
 ```bash
 npm install
 node server.js
+# open http://localhost:3001
 ```
-
-## Deploy to Render
-1. Push to GitHub
-2. Create a new Web Service on render.com
-3. Build Command: `npm install`
-4. Start Command: `node server.js`
-```
-

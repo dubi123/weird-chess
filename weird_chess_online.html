@@ -1,29 +1,373 @@
 <!DOCTYPE html>
-<html>
+<html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
-<title>Weird Chess Online</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weird Realistic Chess — Online</title>
+<style>
+  :root{ --light:#f0d9b5; --dark:#b58863; --accent:#00e0b8; --warn:#ff4d4f; --bg:#121212; --panel:#1e1e1e; --text:#f5f5f5; }
+  *{box-sizing:border-box}
+  body{ margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+        display:grid; grid-template-columns: 320px minmax(360px,720px) 320px; gap:16px; padding:16px; }
+  header{grid-column:1/-1; display:flex; justify-content:space-between; align-items:center}
+  h1{font-size:22px; margin:0}
+  .btn{background:#2b2b2b; color:var(--text); border:1px solid #444; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600}
+  .btn:hover{transform:translateY(-1px); background:#323232}
+  .wrap-board{display:flex; justify-content:center}
+  .board{ display:grid; grid-template-columns:repeat(8, min(10vw,72px)); grid-template-rows:repeat(8, min(10vw,72px));
+          border:6px solid #080808; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.4); background:#111; }
+  .sq{position:relative; user-select:none; display:flex; align-items:center; justify-content:center; font-size:min(6.2vw,45px); line-height:1;}
+  .light{background:var(--light)} .dark{background:var(--dark)}
+  .sq.coord::after{content:attr(data-coord); position:absolute; left:6px; bottom:4px; font-size:11px; opacity:.6;}
+  .piece{filter:drop-shadow(0 2px 1px rgba(0,0,0,.35)); cursor:pointer; transition:transform .05s}
+  .sel{outline:3px solid var(--accent); outline-offset:-3px}
+  .dest{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;}
+  .dot{width:34%; height:34%; border-radius:50%; background:rgba(0,0,0,.22); outline:2px solid rgba(0,0,0,.15);}
+  .capture{outline:3px solid rgba(180,0,0,.6); outline-offset:-3px}
+  .incheck{box-shadow:inset 0 0 0 4px var(--warn)}
+  .panel{background:var(--panel); border:1px solid #2a2a2a; border-radius:12px; padding:12px;}
+  .score{font-weight:700; font-size:14px; display:flex; gap:10px; align-items:center}
+  .score span{padding:4px 8px; border-radius:6px; background:#262626; border:1px solid #3a3a3a}
+  .status{margin-top:8px; font-size:14px; min-height:24px}
+  .moves{max-height:60vh; overflow:auto; direction:ltr; background:#0f0f0f; border-radius:8px; padding:8px; border:1px solid #222}
+  .moves table{width:100%; border-collapse:collapse}
+  .moves td{padding:4px 6px; border-bottom:1px dashed #222; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:13px}
+  .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  input,select{background:#1b1b1b; color:var(--text); border:1px solid #333; border-radius:8px; padding:8px 10px}
+  .tag{display:inline-block; padding:2px 6px; border:1px solid #333; border-radius:999px; font-size:12px; background:#1c1c1c}
+  .promo{position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center;}
+  .promo .box{background:#101010; padding:12px; border-radius:12px; border:1px solid #2a2a2a}
+  .promo .opt{cursor:pointer; font-size:42px; padding:8px 10px; border-radius:10px; border:1px solid #333; background:#1b1b1b}
+</style>
 </head>
 <body>
-<h1>Weird Chess Online</h1>
-<label>Room: <input id="room" value="room1"></label>
-<label>Server: <input id="wsUrl" style="width:250px"></label>
-<button onclick="connectWS()">Connect</button>
-<pre id="log"></pre>
+  <header>
+    <h1>Weird Realistic Chess — Online</h1>
+    <div class="row">
+      <button class="btn" id="btn-new">משחק חדש</button>
+      <button class="btn" id="btn-flip">הפוך לוח</button>
+    </div>
+  </header>
+
+  <aside class="panel">
+    <div class="score">
+      <span>⬜: <b id="scoreW">0</b></span>
+      <span>⬛: <b id="scoreB">0</b></span>
+      <span class="tag" id="turnTag">תור: לבן</span>
+    </div>
+    <div class="status" id="status">מתחבר לשרת...</div>
+    <hr>
+    <div><b>און־ליין מול חבר</b></div>
+    <div class="row" style="margin-top:6px">
+      <label>שרת:</label>
+      <input id="wsUrl" placeholder="(auto)" style="width:170px">
+    </div>
+    <div class="row" style="margin-top:6px">
+      <label>חדר:</label>
+      <input id="room" placeholder="למשל: HAREL123" style="width:140px">
+    </div>
+    <div class="row" style="margin-top:6px">
+      <label>צבע:</label>
+      <select id="wantColor">
+        <option value="any">כל אחד</option>
+        <option value="white">לבן</option>
+        <option value="black">שחור</option>
+      </select>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <button class="btn" id="btn-connect">התחבר</button>
+      <button class="btn" id="btn-disconnect">נתק</button>
+    </div>
+    <div style="margin-top:6px">
+      <span class="tag" id="netBadge">אופליין</span>
+      <div id="netInfo" style="opacity:.85; font-size:12px; margin-top:4px"></div>
+    </div>
+    <hr>
+    <div><b>דמויות:</b> ♟️→🦆 | ♜→🦏 | ♞→🦄 | ♝→🦅 | ♛→🦖 | ♚→🧙‍♂️</div>
+    <div class="tag" style="margin-top:6px">נקודות: חייל 1 | רץ/סוס 3 | צריח 5 | מלכה 9</div>
+  </aside>
+
+  <main class="wrap-board">
+    <div class="board" id="board"></div>
+  </main>
+
+  <aside class="panel">
+    <div><b>מהלכים</b></div>
+    <div class="moves"><table id="movelist"></table></div>
+  </aside>
+
+  <div class="promo" id="promo">
+    <div class="box">
+      <div style="text-align:center; margin-bottom:8px">בחר קידום חייל</div>
+      <div class="row" id="promoRow"></div>
+    </div>
+  </div>
+
 <script>
-document.getElementById('wsUrl').value =
-  (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
-let ws;
-function connectWS(){
-  const url = document.getElementById('wsUrl').value;
-  ws = new WebSocket(url);
-  ws.onmessage = (e)=>{
-    document.getElementById('log').textContent += e.data + '\n';
-  };
-  ws.onopen = ()=>{
-    ws.send(JSON.stringify({type:'join', room:document.getElementById('room').value}));
-  };
+// Auto-fill ws URL to current host (works on Render with HTTPS/WSS)
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('wsUrl').value =
+    (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
+});
+
+/* ===== Full chess engine + UI (legal moves, castling, en passant, promotion) ===== */
+const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+const SKIN = {'P':'🦆','N':'🦄','B':'🦅','R':'🦏','Q':'🦖','K':'🧙‍♂️','p':'🦆','n':'🦄','b':'🦅','r':'🦏','q':'🦖','k':'🧙‍♂️'};
+const PIECE_VALUE = { 'p':1, 'n':3, 'b':3, 'r':5, 'q':9 };
+const boardEl = document.getElementById('board'), statusEl = document.getElementById('status'), turnTag = document.getElementById('turnTag');
+const scoreWEl = document.getElementById('scoreW'), scoreBEl = document.getElementById('scoreB'), moveTable = document.getElementById('movelist');
+const promoOverlay = document.getElementById('promo'), promoRow = document.getElementById('promoRow');
+let flip=false, selected=null, legalCache=[];
+let net = { ws:null, connected:false, room:null, color:'spectator' };
+
+function parseFEN(fen){
+  const [board, turn, castle, ep, half, full] = fen.split(' ');
+  const rows = board.split('/');
+  let squares = new Array(64).fill(null);
+  for(let r=0;r<8;r++){
+    let file=0;
+    for(const ch of rows[r]){
+      if(/[1-8]/.test(ch)){ file+= +ch; }
+      else { const idx = r*8+file; squares[idx]=ch; file++; }
+    }
+  }
+  return { squares, turn, castle, ep:ep==='-'?null:algebToIndex(ep), halfmove:+half, fullmove:+full, history:[], captured:{W:[],B:[]} };
 }
+function indexToRC(i){ return {r:Math.floor(i/8), c:i%8}; }
+function rcToIndex(r,c){ return r*8+c; }
+function inBoard(r,c){ return r>=0 && r<8 && c>=0 && c<8; }
+function isWhite(p){ return p && p===p.toUpperCase(); }
+function isBlack(p){ return p && p===p.toLowerCase(); }
+function sideOf(p){ return isWhite(p)?'w':'b'; }
+function algebToIndex(s){ const file = s.charCodeAt(0)-97; const rank = 8-(+s[1]); return rcToIndex(rank,file); }
+function indexToAlgeb(i){ const {r,c} = indexToRC(i); return String.fromCharCode(97+c) + (8-r); }
+
+function genLegalMoves(st){
+  const ms = genPseudoLegalMoves(st), legal=[];
+  for(const m of ms){ const s2 = makeMove(cloneState(st), m); if(!isKingAttacked(s2, st.turn)) legal.push(m); }
+  return legal;
+}
+function genPseudoLegalMoves(st){
+  const moves=[];
+  for(let i=0;i<64;i++){
+    const p = st.squares[i]; if(!p) continue;
+    if(st.turn==='w' && !isWhite(p)) continue;
+    if(st.turn==='b' && !isBlack(p)) continue;
+    genPieceMoves(st,i,p).forEach(m=>moves.push(m));
+  }
+  return moves;
+}
+function genPieceMoves(st, i, p){
+  const res=[], {r,c}=indexToRC(i), W=isWhite(p), dir=W?-1:1, add=(to,flags={})=>res.push({from:i,to,piece:p,...flags});
+  switch(p.toLowerCase()){
+    case 'p':{
+      const r1=r+dir,c1=c;
+      if(inBoard(r1,c1) && !st.squares[rcToIndex(r1,c1)]){
+        if((W && r1===0)||(!W && r1===7)){ for(const pr of (W?['Q','R','B','N']:['q','r','b','n'])) add(rcToIndex(r1,c1),{promo:pr}); }
+        else add(rcToIndex(r1,c1));
+        const startRank=W?6:1, r2=r+2*dir;
+        if(r===startRank && !st.squares[rcToIndex(r2,c1)]) add(rcToIndex(r2,c1),{double:true});
+      }
+      for(const dc of [-1,1]){
+        const rr=r+dir,cc=c+dc; if(!inBoard(rr,cc)) continue; const idx=rcToIndex(rr,cc), tp=st.squares[idx];
+        if(tp && sideOf(tp)!==st.turn){
+          if((W && rr===0)||(!W && rr===7)){ for(const pr of (W?['Q','R','B','N']:['q','r','b','n'])) add(idx,{capture:true,promo:pr}); }
+          else add(idx,{capture:true});
+        }
+      }
+      if(st.ep!=null){ const {r:er,c:ec}=indexToRC(st.ep); if(er===r+dir && Math.abs(ec-c)===1) add(st.ep,{enpassant:true,capture:true}); }
+      break;
+    }
+    case 'n':{
+      for(const [dr,dc] of [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]){
+        const rr=r+dr,cc=c+dc; if(!inBoard(rr,cc)) continue; const idx=rcToIndex(rr,cc),tp=st.squares[idx];
+        if(!tp || sideOf(tp)!==st.turn) add(idx,{capture:!!tp});
+      } break;
+    }
+    case 'b': lineMoves(st,r,c,[[-1,-1],[-1,1],[1,-1],[1,1]],add); break;
+    case 'r': lineMoves(st,r,c,[[-1,0],[1,0],[0,-1],[0,1]],add); break;
+    case 'q': lineMoves(st,r,c,[[-1,-1],[-1,1],[1,-1],[1,1],[-1,0],[1,0],[0,-1],[0,1]],add); break;
+    case 'k':{
+      for(const dr of [-1,0,1]) for(const dc of [-1,0,1]){
+        if(!dr && !dc) continue; const rr=r+dr,cc=c+dc; if(!inBoard(rr,cc)) continue;
+        const idx=rcToIndex(rr,cc), tp=st.squares[idx]; if(!tp || sideOf(tp)!==st.turn) add(idx,{capture:!!tp});
+      }
+      const rights=st.castle, Wk=(rights.includes('K')), Wq=(rights.includes('Q')), Bk=(rights.includes('k')), Bq=(rights.includes('q'));
+      if(((W && r===7 && c===4)||(!W && r===0 && c===4))){
+        if((W?Wk:Bk) && !st.squares[rcToIndex(r,5)] && !st.squares[rcToIndex(r,6)]){
+          if(!isSquareAttacked(st,rcToIndex(r,4),W?'b':'w') && !isSquareAttacked(st,rcToIndex(r,5),W?'b':'w') && !isSquareAttacked(st,rcToIndex(r,6),W?'b':'w')) add(rcToIndex(r,6),{castle:'K'});
+        }
+        if((W?Wq:Bq) && !st.squares[rcToIndex(r,3)] && !st.squares[rcToIndex(r,2)] && !st.squares[rcToIndex(r,1)]){
+          if(!isSquareAttacked(st,rcToIndex(r,4),W?'b':'w') && !isSquareAttacked(st,rcToIndex(r,3),W?'b':'w') && !isSquareAttacked(st,rcToIndex(r,2),W?'b':'w')) add(rcToIndex(r,2),{castle:'Q'});
+        }
+      }
+      break;
+    }
+  }
+  return res;
+}
+function lineMoves(st,r,c,dirs,add){ for(const [dr,dc] of dirs){ let rr=r+dr,cc=c+dc; while(inBoard(rr,cc)){ const idx=rcToIndex(rr,cc),tp=st.squares[idx]; if(!tp) add(idx); else { if(sideOf(tp)!==st.turn) add(idx,{capture:true}); break; } rr+=dr; cc+=dc; } } }
+function findKingIndex(st, side){ const isW = side==='w'; for(let i=0;i<64;i++){ const p=st.squares[i]; if(!p) continue; if(isW && p==='K') return i; if(!isW && p==='k') return i; } return -1; }
+function isSquareAttacked(st, sq, bySide){ const t=st.turn; st.turn=bySide; const m=genPseudoLegalMoves(st); st.turn=t; return m.some(x=>x.to===sq); }
+function isKingAttacked(st, side){ const k=findKingIndex(st,side); const opp=side==='w'?'b':'w'; return isSquareAttacked(st,k,opp); }
+function cloneState(st){ return {squares:st.squares.slice(),turn:st.turn,castle:st.castle,ep:st.ep,halfmove:st.halfmove,fullmove:st.fullmove,history:st.history.slice(),captured:{W:st.captured.W.slice(),B:st.captured.B.slice()}}; }
+function makeMove(st,m){
+  const from=m.from,to=m.to, moving=st.squares[from], W=isWhite(moving);
+  st.ep=null; let capturedPiece=null;
+  if(m.enpassant){ const {r:tr,c:tc}=indexToRC(to); const capIdx=rcToIndex(tr+(W?1:-1),tc); capturedPiece=st.squares[capIdx]; st.squares[capIdx]=null; }
+  else if(m.capture){ capturedPiece=st.squares[to]; }
+  st.squares[to]=moving; st.squares[from]=null;
+  if(m.promo) st.squares[to]=m.promo;
+  if(m.double){ const {r:fr,c:fc}=indexToRC(from); st.ep = rcToIndex(fr + (W?-1:1), fc); }
+  if(m.castle){ const {r}=indexToRC(to); if(m.castle==='K'){ const rf=rcToIndex(r,7), rt=rcToIndex(r,5); st.squares[rt]=st.squares[rf]; st.squares[rf]=null; } else { const rf=rcToIndex(r,0), rt=rcToIndex(r,3); st.squares[rt]=st.squares[rf]; st.squares[rf]=null; } }
+  if(moving.toLowerCase()==='p' || m.capture) st.halfmove=0; else st.halfmove++;
+  if(st.turn==='b') st.fullmove++;
+  st.castle = updateCastleRights(st.castle,from,to,moving,capturedPiece);
+  if(capturedPiece){ if(W) st.captured.W.push(capturedPiece); else st.captured.B.push(capturedPiece); }
+  st.turn = st.turn==='w'?'b':'w'; st.history.push(m); return st;
+}
+function updateCastleRights(castle,from,to,moving,capturedPiece){
+  let rights = castle.split('').filter(ch=>ch!=='-'); const rm=(ch)=>{const i=rights.indexOf(ch); if(i!==-1) rights.splice(i,1);};
+  if(moving==='K'){rm('K');rm('Q');} if(moving==='k'){rm('k');rm('q');}
+  if(moving==='R'){ if(from===rcToIndex(7,0)) rm('Q'); if(from===rcToIndex(7,7)) rm('K'); }
+  if(moving==='r'){ if(from===rcToIndex(0,0)) rm('q'); if(from===rcToIndex(0,7)) rm('k'); }
+  if(capturedPiece==='R'){ if(to===rcToIndex(7,0)) rm('Q'); if(to===rcToIndex(7,7)) rm('K'); }
+  if(capturedPiece==='r'){ if(to===rcToIndex(0,0)) rm('q'); if(to===rcToIndex(0,7)) rm('k'); }
+  return rights.length?rights.join(''):'-';
+}
+
+const score = ()=>{
+  let w=0,b=0; for(const p of state.squares){ if(!p) continue; const v=PIECE_VALUE[p.toLowerCase()]||0; if(isWhite(p)) w+=v; else b+=v; }
+  scoreWEl.textContent=w; scoreBEl.textContent=b;
+};
+function coordLabel(r,c){const file=String.fromCharCode(97+c),rank=8-r; return file+rank;}
+function indexToAlgebSAN(i){ const {r,c}=indexToRC(i); return String.fromCharCode(97+c)+(8-r); }
+function sanForMove(m){
+  if(!m) return ''; const piece=m.piece.toLowerCase(); let pLetter=''; if('nbrqk'.includes(piece)) pLetter= piece==='n'?'N':piece.toUpperCase(); if(piece==='p') pLetter='';
+  if(m.castle==='K') return 'O-O'; if(m.castle==='Q') return 'O-O-O';
+  const from=indexToAlgebSAN(m.from), to=indexToAlgebSAN(m.to); let s='';
+  if(piece==='p' && m.capture) s = from[0]+'x'+to; else s=pLetter+(m.capture?'x':'')+to; if(m.promo) s+='='+m.promo.toUpperCase();
+  const stBefore = rebuildBefore(m); const s2 = makeMove(cloneState(stBefore), {...m}); const opp = s2.turn; const legal = genLegalMoves(s2);
+  if(legal.length===0){ if(isKingAttacked(s2,opp)) s+='#'; else s+=' (=)'; } else if(isKingAttacked(s2,opp)) s+='+'; return s;
+}
+function rebuildBefore(target){ const st=parseFEN(START_FEN); st.history=[]; st.captured={W:[],B:[]}; for(const mv of state.history){ if(mv===target) break; makeMove(st,{...mv}); } return st; }
+
+const netBadge=document.getElementById('netBadge'), netInfo=document.getElementById('netInfo');
+document.getElementById('btn-new').onclick=()=>{ newGame(); broadcast({type:'newgame', snapshot:snapshot()}); };
+document.getElementById('btn-flip').onclick=()=>{ flip=!flip; draw(); };
+document.getElementById('btn-connect').onclick=connectWS;
+document.getElementById('btn-disconnect').onclick=disconnectWS;
+
+let state={};
+function newGame(){ state=parseFEN(START_FEN); draw(); updateStatus(); }
+function draw(){
+  boardEl.innerHTML='';
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+    let rr=flip?7-r:r, cc=flip?7-c:c, idx=rcToIndex(rr,cc), p=state.squares[idx];
+    const sq=document.createElement('div'); sq.className='sq '+(((r+c)%2===0)?'light':'dark')+' coord'; sq.dataset.index=idx; sq.dataset.coord=coordLabel(rr,cc);
+    if(p){ const el=document.createElement('div'); el.className='piece '+(isWhite(p)?'white':'black'); el.textContent=SKIN[p]; el.onclick=()=>selectSquare(idx); sq.appendChild(el);} else { sq.onclick=()=>selectSquare(idx); }
+    boardEl.appendChild(sq);
+  }
+  paintCheckSquares(); score(); renderMoveList(); turnTag.textContent='תור: '+(state.turn==='w'?'לבן':'שחור');
+}
+function paintCheckSquares(){
+  for(const el of boardEl.querySelectorAll('.incheck')) el.classList.remove('incheck');
+  ['w','b'].forEach(side=>{ if(isKingAttacked(state,side)){ const k=findKingIndex(state,side); const cell=boardEl.querySelector(`[data-index="${k}"]`); if(cell) cell.classList.add('incheck'); } });
+}
+function renderMoveList(){
+  moveTable.innerHTML=''; const hist=state.history;
+  for(let i=0;i<hist.length;i+=2){ const tr=document.createElement('tr'); const n=document.createElement('td'); n.textContent=(Math.floor(i/2)+1)+'.';
+    const w=document.createElement('td'); w.textContent=sanForMove(hist[i]); const b=document.createElement('td'); b.textContent=hist[i+1]?sanForMove(hist[i+1]):'';
+    tr.appendChild(n); tr.appendChild(w); tr.appendChild(b); moveTable.appendChild(tr); }
+}
+function updateStatus(){
+  const inCheck=isKingAttacked(state,state.turn);
+  statusEl.textContent = (net.connected?`מחובר (${net.color})`:'אופליין') + ' • ' + (inCheck?'שח!':'תור '+(state.turn==='w'?'לבן':'שחור'));
+}
+
+function clearHighlights(){ legalCache=[]; for(const el of boardEl.querySelectorAll('.sel,.dest,.capture')){ el.classList.remove('sel','capture'); if(el.classList.contains('dest')) el.remove(); } }
+function highlight(from, moves){
+  const cell=boardEl.querySelector(`[data-index="${from}"]`); if(cell) cell.classList.add('sel');
+  for(const m of moves){ const dest=boardEl.querySelector(`[data-index="${m.to}"]`); if(!dest) continue; if(m.capture) dest.classList.add('capture'); else { const dot=document.createElement('div'); dot.className='dest'; dot.innerHTML='<div class="dot"></div>'; dest.appendChild(dot);} }
+}
+
+function selectSquare(idx){
+  if(net.connected){
+    const myTurn = (net.color==='white' && state.turn==='w') || (net.color==='black' && state.turn==='b');
+    if(!myTurn){ return; }
+    const p = state.squares[idx];
+    if(selected===idx){ clearHighlights(); selected=null; return; }
+    const lm = legalCache.find(m=>m.to===idx);
+    if(selected!=null && lm){
+      if(lm.promo){ askPromotion(lm); return; }
+      state = makeMove(state, lm); afterMove(true, lm); return;
+    }
+    clearHighlights();
+    if(!p) { selected=null; return; }
+    if(state.turn==='w' && !isWhite(p)) return;
+    if(state.turn==='b' && !isBlack(p)) return;
+    selected=idx; const legals=genLegalMoves(state).filter(m=>m.from===idx); legalCache=legals; highlight(idx,legals);
+  } else {
+    const p = state.squares[idx];
+    if(selected===idx){ clearHighlights(); selected=null; return; }
+    const lm = legalCache.find(m=>m.to===idx);
+    if(selected!=null && lm){
+      if(lm.promo){ askPromotion(lm); return; }
+      state = makeMove(state, lm); afterMove(false, lm); return;
+    }
+    clearHighlights();
+    if(!p){ selected=null; return; }
+    if(state.turn==='w' && !isWhite(p)) return;
+    if(state.turn==='b' && !isBlack(p)) return;
+    selected=idx; const legals=genLegalMoves(state).filter(m=>m.from===idx); legalCache=legals; highlight(idx,legals);
+  }
+}
+
+function askPromotion(m){
+  promoOverlay.style.display='flex'; promoRow.innerHTML='';
+  const W = isWhite(state.squares[m.from]); const opts = W? ['Q','R','B','N'] : ['q','r','b','n'];
+  for(const pr of opts){ const d=document.createElement('div'); d.className='opt'; d.textContent=SKIN[pr]; d.onclick=()=>{ m.promo=pr; promoOverlay.style.display='none'; state=makeMove(state,m); afterMove(net.connected, m); }; promoRow.appendChild(d); }
+}
+
+function afterMove(shouldBroadcast, moveObj){
+  selected=null; clearHighlights(); draw(); updateStatus();
+  const opp=state.turn, legal=genLegalMoves(state);
+  if(legal.length===0){ statusEl.textContent = isKingAttacked(state,opp)?'מט! 🎉':'פט! תיקו.'; }
+  if(shouldBroadcast) broadcast({type:'move', room:net.room, move:serializeMove(moveObj), snapshot:snapshot()});
+}
+
+function snapshot(){ return { squares: state.squares, turn: state.turn, castle: state.castle, ep: state.ep, halfmove: state.halfmove, fullmove: state.fullmove, history: state.history }; }
+function loadSnapshot(s){ state.squares=s.squares; state.turn=s.turn; state.castle=s.castle; state.ep=s.ep; state.halfmove=s.halfmove; state.fullmove=s.fullmove; state.history=s.history||[]; draw(); updateStatus(); }
+function serializeMove(m){ return {from:m.from,to:m.to,promo:m.promo||null,castle:m.castle||null,enpassant:!!m.enpassant,capture:!!m.capture,double:!!m.double,piece:m.piece}; }
+function deserializeMove(m){ return {from:m.from,to:m.to,promo:m.promo,castle:m.castle,enpassant:m.enpassant,capture:m.capture,double:m.double,piece:m.piece}; }
+
+// WebSocket client
+function connectWS(){
+  if(net.connected) return;
+  const url = document.getElementById('wsUrl').value || ((location.protocol==='https:'?'wss://':'ws://')+location.host);
+  const room = document.getElementById('room').value.trim();
+  const want = document.getElementById('wantColor').value;
+  if(!room){ alert('הכנס קוד חדר'); return; }
+  try{ net.ws = new WebSocket(url); } catch(e){ statusEl.textContent='שגיאה בפתיחת חיבור: '+e.message; return; }
+  net.ws.onopen = ()=>{ net.connected=true; net.room=room; document.getElementById('netBadge').textContent='מחובר'; statusEl.textContent='מחובר • ממתין לחדר'; send({type:'join', room, want}); };
+  net.ws.onmessage = (ev)=>{
+    const msg = JSON.parse(ev.data);
+    if(msg.type==='joined'){ net.color=msg.color||'spectator'; document.getElementById('netInfo').textContent=`חדר: ${room} • תפקיד: ${net.color}`; if(msg.snapshot) loadSnapshot(msg.snapshot); }
+    else if(msg.type==='move'){ const mv=deserializeMove(msg.move); state=makeMove(state,mv); draw(); updateStatus(); }
+    else if(msg.type==='snapshot'){ if(msg.snapshot) loadSnapshot(msg.snapshot); }
+    else if(msg.type==='newgame'){ loadSnapshot(msg.snapshot); }
+    else if(msg.type==='info'){ document.getElementById('netInfo').textContent=msg.text; }
+    else if(msg.type==='error'){ statusEl.textContent='שגיאת שרת: '+msg.message; }
+  };
+  net.ws.onclose = ()=>{ net.connected=false; net.ws=null; document.getElementById('netBadge').textContent='אופליין'; statusEl.textContent='נותק.'; };
+  net.ws.onerror = ()=>{ statusEl.textContent='שגיאת רשת.'; };
+}
+function disconnectWS(){ if(net.ws){ try{ net.ws.close(); }catch{} } }
+function send(obj){ if(net.ws && net.ws.readyState===1) net.ws.send(JSON.stringify(obj)); }
+function broadcast(obj){ if(net.connected) send(obj); }
+
+// Init
+newGame();
 </script>
 </body>
 </html>

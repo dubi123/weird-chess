@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3001;
 // Serve static files (including HTML) from current directory
 app.use(express.static(__dirname));
 
-// Default route
+// Default route serves the full game UI
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'weird_chess_online.html'));
 });
@@ -19,7 +19,7 @@ app.get('/', (req, res) => {
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Room management
+// Room management (2 players + spectators) — stateless relay
 const rooms = Object.create(null);
 
 function send(ws, obj){ try{ ws.send(JSON.stringify(obj)); } catch(e){} }
@@ -55,7 +55,7 @@ wss.on('connection', (ws) => {
       ws.roomId = roomId;
       ws.color = color;
 
-      send(ws, { type: 'joined', room: roomId, color, created: false, snapshot: room.snapshot });
+      send(ws, { type: 'joined', room: roomId, color, created: !room.snapshot, snapshot: room.snapshot });
       broadcast(roomId, { type: 'info', text: `שחקן חדש הצטרף (${color==='spectator'?'צופה':color})` }, ws);
 
     } else if (msg.type === 'move') {
