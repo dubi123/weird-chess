@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Weird Chess Online</title>
+</head>
+<body>
+<h1>Weird Chess Online</h1>
+<label>Room: <input id="room" value="room1"></label>
+<label>Server: <input id="wsUrl" style="width:250px"></label>
+<button onclick="connectWS()">Connect</button>
+<pre id="log"></pre>
+<script>
+document.getElementById('wsUrl').value =
+  (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
+let ws;
+function connectWS(){
+  const url = document.getElementById('wsUrl').value;
+  ws = new WebSocket(url);
+  ws.onmessage = (e)=>{
+    document.getElementById('log').textContent += e.data + '\n';
+  };
+  ws.onopen = ()=>{
+    ws.send(JSON.stringify({type:'join', room:document.getElementById('room').value}));
+  };
+}
+</script>
+</body>
+</html>
