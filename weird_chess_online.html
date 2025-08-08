@@ -3,12 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Weird Realistic Chess — Online (Mobile + Big Icons)</title>
+<title>Weird Realistic Chess — Online (Mobile + XL Icons v3)</title>
 <style>
   :root{
     --bg:#121212; --panel:#1e1e1e; --text:#f5f5f5;
     --light:#f0d9b5; --dark:#b58863; --accent:#00e0b8; --warn:#ff4d4f;
-    --sq: 56px;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
   html,body{height:100%}
@@ -27,6 +26,7 @@
   .wrap-board{display:flex; justify-content:center; align-items:flex-start}
   .board-wrap{
     width:min(96vmin, 96vw); max-width:720px; aspect-ratio:1/1;
+    /* master square size variable */
     --sq: calc(100% / 8);
   }
   .board{
@@ -34,22 +34,33 @@
     border:6px solid #080808; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.4); background:#111;
     width:100%; height:100%;
   }
-  .sq{position:relative; user-select:none; display:flex; align-items:center; justify-content:center; line-height:1; overflow:hidden;}
+  .sq{
+    position:relative; user-select:none; display:flex; align-items:center; justify-content:center;
+    line-height:1; overflow:hidden;
+  }
   .light{background:var(--light)} .dark{background:var(--dark)}
-  .sq.coord::after{content:attr(data-coord); position:absolute; left:6px; bottom:4px; font-size:clamp(9px, 1.8vw, 12px); opacity:.6;}
-  /* BIG ICONS */
+  .sq.coord::after{content:attr(data-coord); position:absolute; left:6px; bottom:4px; font-size:clamp(9px, 1.8vw, 12px); opacity:.6; pointer-events:none;}
+
+  /* >>> XL ICONS (hard override) <<< */
   .piece{
-    font-size: calc(var(--sq) * 0.98);
-    filter:drop-shadow(0 2px 1px rgba(0,0,0,.35));
-    cursor:pointer; transition:transform .05s;
+    /* CRITICAL: force size relative to square; oversize a bit */
+    font-size: calc(var(--sq) * 1.22) !important; /* ~122% of square */
     line-height: 1;
+    filter: drop-shadow(0 2px 1px rgba(0,0,0,.35));
+    cursor: pointer;
+    transition: transform .05s;
+    pointer-events: none; /* piece inherits clicks via square; prevents text selection on emoji */
   }
+  /* Make destination dots a little smaller so they don't hide pieces */
+  .dest .dot{ width:28%; height:28%; }
+
+  /* Extra bump on small phones */
   @media (max-width: 600px){
-    .piece{ font-size: calc(var(--sq) * 1.08); }
+    .piece{ font-size: calc(var(--sq) * 1.32) !important; } /* even bigger on narrow screens */
   }
+
   .sel{outline:3px solid var(--accent); outline-offset:-3px}
-  .dest{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;}
-  .dot{width:34%; height:34%; border-radius:50%; background:rgba(0,0,0,.22); outline:2px solid rgba(0,0,0,.15);}
+  .dest{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;}
   .capture{outline:3px solid rgba(180,0,0,.6); outline-offset:-3px}
   .incheck{box-shadow:inset 0 0 0 4px var(--warn)}
   .panel{background:var(--panel); border:1px solid #2a2a2a; border-radius:12px; padding:12px;}
@@ -150,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
     (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
 });
 
-/* ===== Full chess engine + UI ===== */
+/* ===== FULL CHESS ENGINE + UI ===== */
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const SKIN = {'P':'🦆','N':'🦄','B':'🦅','R':'🦏','Q':'🦖','K':'🧙‍♂️','p':'🦆','n':'🦄','b':'🦅','r':'🦏','q':'🦖','k':'🧙‍♂️'};
 const PIECE_VALUE = { 'p':1, 'n':3, 'b':3, 'r':5, 'q':9 };
@@ -305,7 +316,9 @@ function draw(){
   for(let r=0;r<8;r++) for(let c=0;c<8;c++){
     let rr=flip?7-r:r, cc=flip?7-c:c, idx=rcToIndex(rr,cc), p=state.squares[idx];
     const sq=document.createElement('div'); sq.className='sq '+(((r+c)%2===0)?'light':'dark')+' coord'; sq.dataset.index=idx; sq.dataset.coord=coordLabel(rr,cc);
-    if(p){ const el=document.createElement('div'); el.className='piece '+(isWhite(p)?'white':'black'); el.textContent=SKIN[p]; el.onclick=()=>selectSquare(idx); sq.appendChild(el);} else { sq.onclick=()=>selectSquare(idx); }
+    // IMPORTANT: click is on the cell, not the emoji (emoji has pointer-events:none)
+    sq.onclick=()=>selectSquare(idx);
+    if(p){ const el=document.createElement('div'); el.className='piece '+(isWhite(p)?'white':'black'); el.textContent=SKIN[p]; sq.appendChild(el); }
     boardEl.appendChild(sq);
   }
   paintCheckSquares(); score(); renderMoveList(); turnTag.textContent='תור: '+(state.turn==='w'?'לבן':'שחור');
@@ -405,6 +418,10 @@ function connectWS(){
 function disconnectWS(){ if(net.ws){ try{ net.ws.close(); }catch{} } }
 function send(obj){ if(net.ws && net.ws.readyState===1) net.ws.send(JSON.stringify(obj)); }
 function broadcast(obj){ if(net.connected) send(obj); }
+
+// helpers used above
+function isWhite(p){ return p && p===p.toUpperCase(); }
+function isBlack(p){ return p && p===p.toLowerCase(); }
 
 // Init
 newGame();
